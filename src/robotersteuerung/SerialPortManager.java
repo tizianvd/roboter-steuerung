@@ -42,11 +42,14 @@ public class SerialPortManager {
     }
     
     public void sendString(String str) {
+        System.out.println("Debug: " + str);
         try{
             serialPortReader.clear();
             serialPort.writeString(str);
         }
-        catch(Exception ex){System.out.println(ex);}
+        catch(Exception ex){
+            //System.out.println(ex);
+        }
     }
     
     public void addListener(SerialPortListener listener) {

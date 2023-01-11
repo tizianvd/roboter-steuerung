@@ -13,6 +13,7 @@ public class MotorCommand {
     private final String position;
     private final String speed;
     private final String group;
+    private boolean sent = false;
 
     public MotorCommand(String motor, String command, String position, String speed, String group) {
         this.motor = motor;
@@ -50,13 +51,18 @@ public class MotorCommand {
     public String getGroup() {
         return group;
     }
-    
-    
-    
+
+    public boolean hasBeenSent() {
+        return sent;
+    }
+
+    public void setSent(boolean sent) {
+        this.sent = sent;
+    }
 
     @Override
     public String toString() {
-        return String.format("%s;%s;%s;%s;%s;\n", motor, command, position, speed, group);
+        return String.format("%s;%s;%s;%s;%s;", motor, command, position, speed, group);
     }
     
     

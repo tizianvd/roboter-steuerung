@@ -30,7 +30,6 @@ public class FileManager {
         String textFileData = TextFileReader.getInstance().readFile(fileName);
         for (String s : textFileData.split("\n")) {
             if (!s.equals("\r")) {
-                //System.out.println(s);
                 data.add(new MotorCommand(s));
             }
         }

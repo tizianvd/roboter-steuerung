@@ -4,6 +4,8 @@
  */
 package robotersteuerung;
 
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -11,7 +13,8 @@ import java.awt.event.KeyEvent;
 import javax.swing.*;
 import java.util.ArrayList;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.table.DefaultTableModel;
+import utils.ExtendedTableCellRenderer;
+import utils.ExtendedTableModel;
 import org.apache.commons.io.FilenameUtils;
 
 
@@ -40,6 +43,7 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
         commandBox.setModel(new DefaultComboBoxModel(commands));
         commandTable.getTableHeader().setFont(new Font("Segoe", Font.PLAIN, 18));
         commandTable.setDefaultEditor(Object.class, null);                      //Deaktiviert die Eingabe für die Tabelle.
+        commandTable.setDefaultRenderer(Boolean.class, new utils.ExtendedTableCellRenderer());
         serialPortManager.addListener(this);
         
         FileNameExtensionFilter ascFilter = new FileNameExtensionFilter("asc files (*.asc)", "asc");
@@ -102,12 +106,14 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
         motorBox = new javax.swing.JComboBox<>();
         addButton = new javax.swing.JButton();
         commandBox = new javax.swing.JComboBox<>();
+        sendButton = new javax.swing.JButton();
         jMenuBar1 = new javax.swing.JMenuBar();
         fileMenu = new javax.swing.JMenu();
         jMenu2 = new javax.swing.JMenu();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("new - Roboter Steuerung");
+        setPreferredSize(new java.awt.Dimension(750, 610));
         setResizable(false);
 
         commandTable.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
@@ -288,6 +294,13 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
 
         commandBox.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
 
+        sendButton.setText("Senden");
+        sendButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                sendButtonMouseClicked(evt);
+            }
+        });
+
         jMenuBar1.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
 
         fileMenu.setText("File");
@@ -310,6 +323,7 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(sendButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jScrollPane1)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(motorBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -330,7 +344,7 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 438, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(positionField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(speedField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -338,6 +352,8 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
                     .addComponent(motorBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(addButton)
                     .addComponent(commandBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(sendButton, javax.swing.GroupLayout.DEFAULT_SIZE, 33, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -345,10 +361,12 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
     }// </editor-fold>//GEN-END:initComponents
     
     private void updateTable() {
-        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+        ExtendedTableModel model = new ExtendedTableModel(columnNames, 0);
+        ArrayList<Integer> sentRows = new ArrayList<>();
         for (int i = 0; i < tableMinRows; i++) {
             if (i < commandList.size()) {
                 model.addRow(new Object[]{commandList.get(i).getMotor(), commandList.get(i).getCommand(), commandList.get(i).getPosition(), commandList.get(i).getSpeed(), commandList.get(i).getGroup()});   
+                model.setRowColour(i, Color.red);
             } else {
                 model.addRow(new Object[]{"", "", "", "", ""});   
             }
@@ -356,16 +374,32 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
         
         commandTable.setModel(model);
     }
+    
+    
     private void addCommand() {
         MotorCommand m = new MotorCommand(String.valueOf(motorBox.getSelectedItem()), String.valueOf(commandBox.getSelectedItem()), positionField.getText(), speedField.getText(), groupField.getText());
         commandList.add(m);
-        serialPortManager.sendString(m.toString());
         System.out.print("Input: " + m);
         updateTable();
         resetInputFields();
         this.requestFocus();
         if (!currentFilePath.isEmpty()) {
             this.setTitle("*"+currentFilePath + " - Roboter Steuerung");
+        }
+    }
+    
+    private void sendNextCommands() {
+        for (MotorCommand m : commandList) {
+            if (!m.hasBeenSent()) {
+                for (MotorCommand m2 : commandList) {
+                    if (m2.getGroup().equals(m.getGroup())) {
+                        serialPortManager.sendString(m2.toString());
+                        m2.setSent(true);
+                    }
+                }
+                updateTable();
+                break;
+            }
         }
     }
     
@@ -428,6 +462,10 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
             evt.consume();
         }
     }//GEN-LAST:event_onType
+
+    private void sendButtonMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_sendButtonMouseClicked
+        sendNextCommands();
+    }//GEN-LAST:event_sendButtonMouseClicked
     
     public void onReceiveString() {
         System.out.println(serialPortManager.getOutput());
@@ -445,6 +483,7 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JComboBox<String> motorBox;
     private javax.swing.JTextField positionField;
+    private javax.swing.JButton sendButton;
     private javax.swing.JTextField speedField;
     // End of variables declaration//GEN-END:variables
 }
