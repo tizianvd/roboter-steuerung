@@ -13,9 +13,9 @@ import java.awt.event.KeyEvent;
 import javax.swing.*;
 import java.util.ArrayList;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import utils.ExtendedTableCellRenderer;
-import utils.ExtendedTableModel;
+import javax.swing.table.DefaultTableModel;
 import org.apache.commons.io.FilenameUtils;
+import utils.ExtendedTable;
 
 
 public class UserInterface extends javax.swing.JFrame implements SerialPortListener {
@@ -41,10 +41,15 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
     private void initAdditionalComponents() {
         motorBox.setModel(new DefaultComboBoxModel(motors));
         commandBox.setModel(new DefaultComboBoxModel(commands));
-        commandTable.getTableHeader().setFont(new Font("Segoe", Font.PLAIN, 18));
-        commandTable.setDefaultEditor(Object.class, null);                      //Deaktiviert die Eingabe für die Tabelle.
-        commandTable.setDefaultRenderer(Boolean.class, new utils.ExtendedTableCellRenderer());
         serialPortManager.addListener(this);
+        
+        commandTable = new ExtendedTable(commandTable.getModel());
+        commandTable.setDefaultEditor(Object.class, null);                      //Deaktiviert die Eingabe für die Tabelle.
+        commandTable.setRowHeight(30);
+        commandTable.getTableHeader().setResizingAllowed(false);
+        commandTable.getTableHeader().setReorderingAllowed(false);
+        commandTable.getTableHeader().setFont(new Font("Segoe", Font.PLAIN, 18));
+        jScrollPane1.setViewportView(commandTable);
         
         FileNameExtensionFilter ascFilter = new FileNameExtensionFilter("asc files (*.asc)", "asc");
         fileChooser.setFileFilter(ascFilter);
@@ -361,12 +366,12 @@ public class UserInterface extends javax.swing.JFrame implements SerialPortListe
     }// </editor-fold>//GEN-END:initComponents
     
     private void updateTable() {
-        ExtendedTableModel model = new ExtendedTableModel(columnNames, 0);
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
         ArrayList<Integer> sentRows = new ArrayList<>();
         for (int i = 0; i < tableMinRows; i++) {
             if (i < commandList.size()) {
                 model.addRow(new Object[]{commandList.get(i).getMotor(), commandList.get(i).getCommand(), commandList.get(i).getPosition(), commandList.get(i).getSpeed(), commandList.get(i).getGroup()});   
-                model.setRowColour(i, Color.red);
+                commandTable.setRowColor(i, Color.red);
             } else {
                 model.addRow(new Object[]{"", "", "", "", ""});   
             }
